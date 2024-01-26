@@ -1,6 +1,13 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES']='2'
+os.environ["NCCL_P2P_DISABLE"]='true'
+
 import sys
-sys.path.append("..")
-from  models import audio
+# 获取当前脚本的上层目录
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 将上层目录添加到sys.path中
+sys.path.append(parent_dir)
+from models import audio
 from os import  path
 from concurrent.futures import as_completed, ProcessPoolExecutor
 import numpy as np
@@ -11,8 +18,8 @@ from glob import glob
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--process_num', type=int, default=6) #number of process to preprocess the audio
-parser.add_argument("--data_root", type=str,help="Root folder of the LRS2 dataset", required=True)
-parser.add_argument("--out_root", help="output audio root", required=True)
+parser.add_argument("--data_root", type=str,help="Root folder of the LRS2 dataset", default="data/test/")
+parser.add_argument("--out_root", help="output audio root", default='data/test/audio_preprocess')
 args = parser.parse_args()
 sample_rate=16000  # 16000Hz
 template = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'
@@ -44,7 +51,7 @@ def mp_handler_audio(job):
 
 def main(args):
     print("looking up paths.... from", args.data_root)
-    filelist = glob(path.join(args.data_root, '*/*.mp4'))
+    filelist = glob(path.join(args.data_root, '*.mp4'))
 
     jobs = [(vfile, args) for i, vfile in enumerate(filelist)]
     p_audio = ProcessPoolExecutor(args.process_num)

@@ -1,3 +1,7 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES']='3'
+os.environ["NCCL_P2P_DISABLE"]='true'
+
 from os.path import join, isfile
 from tqdm import tqdm
 import torch
@@ -15,11 +19,12 @@ from piq.feature_extractors import InceptionV3
 from models import define_D
 from loss import GANLoss
 from models import Renderer  
+import torchvision.utils as vutils
 import argparse
 parser=argparse.ArgumentParser()
-parser.add_argument('--sketch_root',required=True,help='root path for sketches')
-parser.add_argument('--face_img_root',required=True,help='root path for face frame images')
-parser.add_argument('--audio_root',required=True,help='root path for audio mel')
+parser.add_argument('--sketch_root',default='data/test/video_preprocess/lrs2_sketch128/test',help='root path for sketches')
+parser.add_argument('--face_img_root',default='data/test/video_preprocess/lrs2_face128/test',help='root path for face frame images')
+parser.add_argument('--audio_root',default='data/test/audio_preprocess/test',help='root path for audio mel')
 args=parser.parse_args()
 #other parameters
 num_workers = 20
@@ -28,8 +33,8 @@ finetune_path =None
 ref_N = 3
 T = 1
 print('Project_name:', Project_name)
-batch_size = 96       #### batch_size
-batch_size_val = 96    #### batch_size
+batch_size = 2     #### batch_size
+batch_size_val = 2    #### batch_size
 
 mel_step_size = 16  # 16
 fps = 25
@@ -100,7 +105,7 @@ class Dataset(object):
             T_frame_sketch = []
             for img_path in T_face_paths:
                 sketch_path = os.path.join(sketch_root,
-                            '/'.join(img_path.split('/')[-3:]))
+                            '/'.join(img_path.split('/')[-2:]))
                 if os.path.isfile(img_path)  and os.path.isfile(sketch_path):
                     T_frame_img.append(cv2.resize(cv2.imread(img_path),(img_size,img_size)))
                     T_frame_sketch.append(cv2.imread(sketch_path))
@@ -112,7 +117,7 @@ class Dataset(object):
             ref_N_frame_img,ref_N_frame_sketch = [],[]
             for img_path in ref_N_fpaths:
                 sketch_path = os.path.join(sketch_root,
-                                           '/'.join(img_path.split('/')[-3:]))
+                                           '/'.join(img_path.split('/')[-2:]))
                 if os.path.isfile(img_path)  and os.path.isfile(sketch_path):
                     ref_N_frame_img.append(cv2.resize(cv2.imread(img_path),(img_size,img_size)))
                     ref_N_frame_sketch.append(cv2.imread(sketch_path))
@@ -270,6 +275,11 @@ def evaluate(model, val_data_loader):
 
             generated_img, wrapped_ref, perceptual_warp_loss, perceptual_gen_loss \
                 = model(T_frame_img, T_frame_sketch, ref_N_frame_img, ref_N_frame_sketch,T_mels)  # (B*T,3,H,W)
+
+            if random.randint(0,4)==1:
+                grid = vutils.make_grid([torch.flip(generated_img[0].cpu().detach(), (0,)),torch.flip(wrapped_ref[0].cpu().detach(), (0,)),torch.flip(T_frame_img[0][0].cpu(), (0,)),T_frame_sketch[0][0].cpu(),torch.flip(ref_N_frame_img[0][0].cpu(), (0,)),ref_N_frame_sketch[0][0].cpu()], nrow=2, padding=2, normalize=True)
+                vutils.save_image(grid, "test_images.png")
+
             perceptual_warp_loss = perceptual_warp_loss.sum()
             perceptual_gen_loss = perceptual_gen_loss.sum()
             # (B*T,3,H,W)
@@ -333,6 +343,9 @@ if __name__ == '__main__':
         running_warp_loss,running_gen_loss= 0.,0.
         for step, (T_frame_img, T_frame_sketch, ref_N_frame_img, ref_N_frame_sketch, T_mels) in prog_bar:
             #    (B,T,3,H,W)   (B,T,3,H,W)       (B,ref_N,3,H,W)   (B,ref_N,3,H,W) B,T,1,h,w
+            
+
+        
             model.train()
             disc.train()
             optimizer.zero_grad()
@@ -343,6 +356,11 @@ if __name__ == '__main__':
 
             generated_img,wrapped_ref,perceptual_warp_loss,perceptual_gen_loss\
                 = model(T_frame_img, T_frame_sketch, ref_N_frame_img, ref_N_frame_sketch, T_mels)# (B*T,3,H,W)
+
+            if random.randint(0,4)==1:
+                grid = vutils.make_grid([torch.flip(generated_img[0].cpu().detach(), (0,)),torch.flip(wrapped_ref[0].cpu().detach(), (0,)),torch.flip(T_frame_img[0][0].cpu(), (0,)),T_frame_sketch[0][0].cpu(),torch.flip(ref_N_frame_img[0][0].cpu(), (0,)),ref_N_frame_sketch[0][0].cpu()], nrow=2, padding=2, normalize=True)
+                vutils.save_image(grid, "train_images.png")
+
 
             perceptual_warp_loss=perceptual_warp_loss.sum()
             perceptual_gen_loss=perceptual_gen_loss.sum()

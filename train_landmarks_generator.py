@@ -1,4 +1,7 @@
 import os
+os.environ['CUDA_VISIBLE_DEVICES']='2'
+os.environ["NCCL_P2P_DISABLE"]='true'
+
 from tqdm import tqdm
 import torch
 import numpy as np
@@ -9,9 +12,9 @@ from tensorboardX import SummaryWriter
 from models import Landmark_generator as Landmark_transformer
 import argparse
 parser=argparse.ArgumentParser()
-parser.add_argument('--pre_audio_root',default='...../Dataset/lrs2_preprocessed_audio',
+parser.add_argument('--pre_audio_root',default='data/test/audio_preprocess/test',
                     help='root path for preprocessed  audio')
-parser.add_argument('--landmarks_root',default='...../Dataset/lrs2_landmarks',
+parser.add_argument('--landmarks_root',default='data/test/video_preprocess/lrs2_landmarks/test',
                     help='root path for preprocessed  landmarks')
 args=parser.parse_args()
 #network parameters
@@ -24,10 +27,10 @@ Nl=15
 T = 5
 Project_name = 'landmarkT5_d512_fe1024_lay4_head4'
 print('Project_name:', Project_name)
-finetune_path =None
+finetune_path = 'test/checkpoints/landmarkgenerator_checkpoint.pth'
 num_workers = 8
-batch_size =128  # 512
-batch_size_val =128  #512
+batch_size =2  # 512
+batch_size_val =2  #512
 evaluate_interval = 5000  #
 checkpoint_interval = evaluate_interval
 mel_step_size = 16
@@ -159,6 +162,7 @@ class Dataset(object):
             try:
                 audio_mel = np.load(join(args.pre_audio_root,vid_name, "audio.npy"))
             except Exception as e:
+                print('mel.npy 读取错误')
                 continue
             T_mels = []
             for frame_idx in T_idxs:

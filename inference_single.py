@@ -1,5 +1,9 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES']='2'
+os.environ["NCCL_P2P_DISABLE"]='true'
+
 import numpy as np
-import cv2, os, argparse
+import cv2, argparse
 import subprocess
 from tqdm import tqdm
 from models import Renderer
@@ -10,10 +14,10 @@ from models import audio
 from draw_landmark import draw_landmarks
 import mediapipe as mp
 parser = argparse.ArgumentParser()
-parser.add_argument('--input', '--input_template_video', type=str, default='./test/template_video/129.mp4')
+parser.add_argument('--input', '--input_template_video', type=str, default='data/test/fengzhi_hq_25.mp4')
 #'./test/template_video/129.mp4'
 
-parser.add_argument('--audio', type=str, default='./test/template_video/audio2.wav')
+parser.add_argument('--audio', type=str, default='/datadisk1/zhouxc/CY/Lips/test_data/wav/fengzhi.wav')
 #'./test/template_video/abstract.mp3'
 #'./test/template_video/audio2.wav'
 parser.add_argument('--output_dir', type=str, default='./test_result')
